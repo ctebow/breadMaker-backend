@@ -12,3 +12,5 @@
 - Class loss: 0.49
 - Looking to improve with more training, use tighter/better bounding boxes
 
+### Link for yolov8 python usage
+- https://docs.ultralytics.com/usage/python/
