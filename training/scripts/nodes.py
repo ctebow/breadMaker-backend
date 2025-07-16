@@ -1,9 +1,10 @@
 """
 Functions to clean up hough transform.
 """
-
+import cv2
 import math
-
+import matplotlib.pyplot as plt
+from classes import run_yolo_test, results_to_boxes
 def unnest_list(lst: list[list[list[int, int, int, int]]]) -> list[list[int, int, int, int]]:
     """
     Remove uncessary brackets.
@@ -115,9 +116,9 @@ def merge_lines(lines: list[list[int, int, int, int]],
                 angle_threshold: int, distance_threshold: int) -> None:
    
     lines = lines.copy()  # work on a copy
-
+    i = 0
     changed = True
-    while changed:
+    while changed or i < 1000:
         changed = False
         merged = False
 
@@ -137,36 +138,113 @@ def merge_lines(lines: list[list[int, int, int, int]],
                     break  # restart loop
             if merged:
                 break
-
+        i += 1
     return lines
 
-
-### TODO: Determine if this is necessary
-def cluster_points(lines: list[list[int, int, int, int]], distance_threshold) -> dict[list[int, int], list[list[int, int]]]:
+def merge_lines_one_pass(lines, angle_threshold, distance_threshold):
     """
-    Cluster points that are close to one another and keep a running average
-    cluster center. 
+    Merge lines based on how close and how similar they are. 
     """
 
-    for idx1, line1 in enumerate(lines):
-        x01, y01, x11, y11 = line1
+    merged_flags = [False] * len(lines)
+    merged_lines = []
 
-        for line2 in lines[idx1:]:
-            x02, y02, x12, y12 = line2
+    n = len(lines)
+    for i in range(n):
+        if merged_flags[i]:
+            continue
 
-            dist = min(math.hypot(x01 - x02, y01 - y02), 
-                       math.hypot(x01 - x12, y01 - y12), 
-                       math.hypot(x11 - x02, y11 - y02), 
-                       math.hypot(x11 - x12, y11 - y12))
-    
-    raise NotImplementedError
+        base = lines[i]
+        for j in range(i + 1, n):
+            if merged_flags[j]:
+                continue
 
+            if check_lines_similar(base, lines[j], angle_threshold, distance_threshold):
+                base = merge_two_lines(base, lines[j])
+                merged_flags[j] = True  # Don't use this line again
 
+        merged_lines.append(base)
 
-def identify_nodes(lines, distance_threshold) -> list[list[float, float]]:
+    return merged_lines
+
+def point_in_box(point: list[int, int], box: list[int, int, int, int]) -> bool:
     """
-    Identify nodes based on clustering line endpoints as well as definition
-    of a node. 
-        - Return list of node coordinates
+    Helper for line in region. 
+    """
+    x, y = point
+    tx, ty, bx, by = box
+    return tx <= x <= bx and ty <= y <= by
+
+def ccw(ax, ay, bx, by, cx, cy):
+    """
+    Helper for do_lines_intersect.
+    """
+    return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax)
+
+def do_lines_intersect(line, region_line):
+    """
+    Helper for line in region
+    """
+    tx, ty, bx, by = region_line
+    lx1, ly1, lx2, ly2 = line
+
+    return ccw(lx1, ly1, tx, ty, bx, by) != ccw(lx2, ly2, tx, ty, bx, by) and ccw(lx1, ly1, lx2, ly2, tx, ty) != ccw(lx1, ly1, lx2, ly2, bx, by)
+
+def line_in_region(line: list[int, int, int, int], region: list[int, int, int, int]) -> bool:
+    """
+    Determines if a line fully or partially lies within a bounding box region. 
     """
 
+    tx, ty, bx, by = region # top left, bottom right
+    xl1, yl1, xl2, yl2 = line
+
+    if point_in_box([xl1, yl1], region) and point_in_box([xl2, yl2], region):
+        return True
+    edges = [
+       [tx, ty, bx, ty], # top
+       [bx, ty, bx, by], # left
+       [bx, by, tx, by], # bottom
+       [tx, by, tx, ty], # right
+    ]
+
+    for edge in edges:
+        if do_lines_intersect(line, edge):
+            return True
+    return False
+
+
+def lsd_detection(image_path):
+    """
+    Use cv2 line segment detection.
+    """
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    lsd = cv2.createLineSegmentDetector(0) # 0 for default parameters
+    lines = lsd.detect(gray)[0]
+    return lines
+
+"""
+Testing Code
+"""
+
+
+results = run_yolo_test('training/data/bestv2_june26.pt', 'training/training_images/test5.jpg', show=False, print=False)
+boxes = results_to_boxes(results)
+print(boxes)
+
+img = cv2.imread('training/training_images/test5.jpg')
+lines = unnest_list(lsd_detection('training/training_images/test5.jpg'))
+for _ in range(2):
+    lines = merge_lines_one_pass(lines, 5, 5)
+print(len(lines))
+
+if lines is not None:
+    for line in lines:
+        x1, y1, x2, y2 = line
+        cv2.line(img, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 5)
+
+plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+plt.title("Detected Lines")
+plt.axis("off")
+plt.show()
