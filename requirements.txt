@@ -6,3 +6,4 @@ shapely
 ultralytics
 numpy
 uvicorn
+python-multipart
