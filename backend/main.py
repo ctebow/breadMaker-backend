@@ -9,6 +9,7 @@ app = FastAPI()
 origins = [
     "http://localhost:5173",  
     "http://127.0.0.1:5173",
+    "https://bread-maker-frontend-1b02mgpcd-cadens-projects-d48b21c6.vercel.app"
 ]
 
 app.add_middleware(
