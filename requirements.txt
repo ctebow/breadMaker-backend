@@ -1,8 +1,7 @@
 fastapi
 pydantic
 paddleocr
-cv2
-matplotlib
+opencv-python
 shapely
 ultralytics
 numpy
