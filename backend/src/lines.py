@@ -26,18 +26,22 @@ import matplotlib.pyplot as plt
 from shapely.geometry import LineString, box as shapely_box
 from typing import List, Union
 from ultralytics import YOLO
+import numpy as np
 
 """
 Functions to merge Lines. 
 Using merge_lines_one_pass 2-3 times is usually enough.
 """
 
-def resize_image(file_path, max_size=1000):
+def resize_image(file, max_size=1000, path=False):
     """
     Resize an image for optimal size for lsd
     """
-
-    img = cv2.imread(file_path)
+    if not path:
+        nparr = np.frombuffer(file, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    else:
+        img = cv2.imread(file)
     height, width, _ = img.shape
     scale = max_size / max(height, width)
     if scale < 1.0:
@@ -260,7 +264,6 @@ def delete_bad_lines(lines: List[List[int]], boxes: List[List[int]], distance_th
     result = []
     for line in lines:
         if get_length(line) < length_threshold:
-            print(f'Line too short, deleting line of length: {get_length(line)}')
             continue
         count = 0
         x1, y1, x2, y2 = line
@@ -274,8 +277,7 @@ def delete_bad_lines(lines: List[List[int]], boxes: List[List[int]], distance_th
                 break
         if count >= 2:  
             result.append(line)
-        else:
-            print(f'Line was not connected to two boxes, connected to: {count} boxes')
+
     return result
 
 """
@@ -372,7 +374,7 @@ def run_lines_algorithm(weights_path, file_path, show=True, merge_angle=30, merg
     Run a test for what I have so far, print pertinent information. 
     """
     t1 = time.time()
-    img = resize_image(file_path)
+    img = resize_image(file_path, path=True)
     
     results = run_yolo_test(weights_path, img, show=False, verbose=False)
     boxes = results_to_coords(results)
@@ -400,3 +402,24 @@ def run_lines_algorithm(weights_path, file_path, show=True, merge_angle=30, merg
         plot_everything(results[0], lines_new, img)
 
     return results, lines_new
+
+
+MERGE_ANGLE = 30
+MERGE_DISTANCE = 10
+DELETE_DISTANCE = 5
+LENGTH_THRESHOLD = 5
+
+def run_yolo(weights_path, image):
+    t1 = time.time()
+    img = resize_image(image)
+    results = run_yolo_test(weights_path, img, show=False, verbose=False)
+    boxes = results_to_coords(results)
+    lines_new = unnest_list(lsd_detection(img))
+    lines_new = remove_or_trim_lines_shapely(lines_new, boxes)
+    for _ in range(2):
+        lines_new = merge_lines_one_pass(lines_new, MERGE_ANGLE, MERGE_DISTANCE)
+    lines_new = delete_bad_lines(lines_new, boxes, DELETE_DISTANCE, LENGTH_THRESHOLD)
+    t2 = time.time()
+    return results, lines_new, t2 - t1
+
+
