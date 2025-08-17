@@ -235,7 +235,7 @@ def test_node_sorting(path_to_image) -> dict:
     return connections_dict
 
 def run_algo(image):
-    raw_yolo, lines, time = run_yolo("training/data/bestv2_june26.pt", image)
+    raw_yolo, lines, time = run_yolo("backend/training/data/bestv2_june26.pt", image)
     components, text, junction_count = process_boxes(raw_yolo)
     connections, connecting_lines_raw = connect_components(components, lines, 3)
     component_ids_raw = format_classes(components, connecting_lines_raw)
