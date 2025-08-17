@@ -455,7 +455,7 @@ def bfs_layout3(component_ids, component_wires, DIMENSIONS_MAP=DIMENSIONS_MAP, S
 
     return new_component_ids, flat_wires, original_positions
 
-# --- Rewritten BFS Layout Logic ---
+# ok rewrite
 def get_component_center(component):
     """Calculates the center of a component."""
     return component['xPos'], component['yPos']
@@ -472,7 +472,7 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
     """
     Performs a breadth-first layout of components and wires after an initial transformation.
     """
-    # 1. Initialization and Transformation
+    # Initialization and Transformation
     new_components = copy.deepcopy(component_ids)
     
     # Transform component positions and update their snap points
@@ -506,7 +506,7 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
     if start_comp_id in unvisited_components:
         unvisited_components.remove(start_comp_id)
 
-    # 2. Main BFS Loop (operates on transformed coordinates)
+    # Main BFS Loop (operates on transformed coordinates)
     while queue:
         current_comp_id = queue.popleft()
         current_comp = new_components[current_comp_id]
@@ -532,7 +532,7 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
 
         unvisited_wires.remove(tuple(closest_wire))
         
-        # 3. Snap Wire to Component
+        # Snap Wire to Component
         p1 = (closest_wire[0], closest_wire[1])
         p2 = (closest_wire[2], closest_wire[3])
 
@@ -546,7 +546,7 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
 
         snapped_start_point = (target_snap_point['x'], target_snap_point['y'])
 
-        # 4. Adjust Wire Orientation
+        # Adjust Wire Orientation
         orientation = line_orientation(start_point[0], start_point[1], end_point[0], end_point[1])
         dx, dy = end_point[0] - start_point[0], end_point[1] - start_point[1]
 
@@ -564,7 +564,7 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
                             "x3": snap_to_grid((snapped_start_point[0] + snapped_start_point[1]) / 2), 
                             "x4": snap_to_grid((snapped_end_point[0] + snapped_end_point[1]) / 2)})
 
-        # 5. Find and Move the Next Component
+        # Find and Move the Next Component
         next_comp_id = None
         min_dist_to_comp = float('inf')
 
@@ -596,6 +596,3 @@ def bfs_layout_v4(component_ids, component_wires, grid_size=10, expand=1.5, shif
         queue.append(next_comp_id)
 
     return new_components, new_wires, None
-
-if __name__ == "__main__":
-    print(infer_rotation("resistor", (0, 0, 40, 100), [(20, 0), (20, 100)]))

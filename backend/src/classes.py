@@ -5,14 +5,6 @@ from paddleocr import PaddleOCR
 from .lines import point_close_to_box, results_to_boxes, run_lines_algorithm, run_yolo
 from .format import format_classes, bfs_layout_v4
 
-"""
-Ok I think I want to move away from the idea of using classes in python -->
-Simpler to generate a netlist just using a connections dict.
-I think the key to adding box to box recognition as well as node merging is to
-just keep it simple and do those both in the step where I make the connections
-dict in the first place. 
-"""
-
 ### MERGE OVERLAPPING BOUNDING BOXES --> THIS IS MOST URGENT YOU ARE MISSING CONNECTIONS
 ### I think I am also trimming a tad too aggressively, better to have uncessary lines that can be ruled out later 
 ## versus some stuff missing. I should investigate this. 
@@ -215,24 +207,7 @@ def connections_to_nodes(connections_dict: dict, junction_count):
                     pass
     return result
 
-
-
-
-"""
-Testing flow functions.
-"""
-
-def test_node_sorting(path_to_image) -> dict:
-    """
-    Test control flow so far. 
-    """
-
-    raw_yolo_results, lines = run_lines_algorithm('training/data/bestv2_june26.pt', path_to_image)
-    components, text, junction_count = process_boxes(raw_yolo_results)
-    connections_dict, connecting_lines = connect_components(components, lines, 3)
-    #nodes_dict = connections_to_nodes(connections_dict, junction_count)
-
-    return connections_dict
+# still need to integrate text recog
 
 def run_algo(image):
     raw_yolo, lines, time = run_yolo("backend/training/data/bestv2_june26.pt", image)
@@ -242,6 +217,4 @@ def run_algo(image):
     component_ids, connecting_wires, _ = bfs_layout_v4(component_ids_raw, connecting_lines_raw)
     return {"componentIds": component_ids, "connections": connections, "lines": connecting_wires, "text": text, "time": time}
 
-if __name__ == "__main__":
-    print(test_node_sorting("training/test_images/test6.jpg"))
 
